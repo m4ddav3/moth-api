@@ -44,9 +44,8 @@ sub get_stream($) {
 sub get_samples($) {
     my ($stream_id) = @_;
 
-    my $samples_data = moth_query('moth_samples', ['stream'], [$stream_id]);
+    my $samples = moth_query('moth_samples', ['stream'], [$stream_id]);
 
-    my $samples = $samples_data->{rows};
     foreach my $sample (@$samples) {
         my $sample_id = $sample->{id};
 
@@ -56,23 +55,75 @@ sub get_samples($) {
         push @{$sample->{data}}, $sample_data;
     }
 
-    return $samples_data;
+    return $samples;
 }
 
 sub get_sensors() {
     return moth_query('moth_sensors');
 }
 
+sub get_sensor($) {
+    my ($sensor_id) = @_;
+
+    my $sensor = moth_query_item('moth_sensors', ['id'], [$sensor_id]);
+    my $metadata = moth_query('moth_sensor_metadata', ['sensor'], [$sensor_id]);
+
+    $sensor->{metadata} = [];
+
+    foreach my $row (@$metadata) {
+        push @{$sensor->{metadata}}, { key => $row->{k}, value => $row->{v} };
+    }
+
+    return $sensor;
+}
+
+sub get_sensor_samples($) {
+    my ($sensor_id) = @_;
+
+    my $sensor = get_sensor($sensor_id);
+
+    my $samples = moth_query(
+        'moth_sample_data',
+        ['sensor'],
+        [$sensor_id],
+        ['inner,moth_samples,moth_samples.id = moth_sample_data.sample'],
+    );
+    $sensor->{samples} = $samples;
+
+    return $sensor;
+}
+
 sub moth_query {
-    my ($table, $fields, $params) = @_;
+    my ($table, $fields, $params, $joins) = @_;
 
     $fields //= [];
     $params //= [];
+    $joins  //= [];
 
     my $query = { stmt => "SELECT * FROM $table" };
 
+    foreach my $join (@$joins) {
+        my ($type, $table, $clause) = split(/,/, $join);
+
+        die "Bad join spec [$join]" unless ($type && $table && $clause);
+
+        if ($type =~ m/inner/i) {
+            $query->{stmt} .=
+                sprintf(' INNER JOIN %s ON (%s)', $table, $clause);
+        }
+        else {
+            die "ERROR - BAD JOIN TYPE - Expect 'INNER', got $type ($join)";
+        }
+    };
+
     if (scalar @$fields) {
-        $query->{stmt} .= ' WHERE '.join(' AND ', map { "$_ = ?" } @$fields);
+        $query->{stmt} .= sprintf(
+            ' WHERE %s',
+            join(' AND ', map { $_ =~ /=/ ? $_ : "$_ = ?" } @$fields),
+        );
+    }
+
+    if (scalar @$params) {
         $query->{args} = $params;
     }
 
@@ -86,10 +137,7 @@ sub moth_query {
 
     my $content = $json->decode($response->{content});
 
-    my $data = {
-        rows => [],
-        cols => [],
-    };
+    my $data = [];
 
     my $cols = $content->{cols};
     my $rows = $content->{rows};
@@ -98,16 +146,14 @@ sub moth_query {
         my $entry = {};
         @{$entry}{@$cols} = @$row;
 
-        push @{$data->{rows}}, $entry;
+        push @{$data}, $entry;
     }
-
-    $data->{cols} = $cols;
 
     return $data;
 }
 
-sub moth_query_item($;$$) {
-    my $results = moth_query(@_)->{rows};
+sub moth_query_item($;$$$) {
+    my $results = moth_query(@_);
     my ($result) = @$results;
 
     return $result;
@@ -130,7 +176,7 @@ HTML
 };
 
 get '/streams' => sub {
-    get_streams()->{rows};
+    get_streams();
 };
 
 get '/streams/:stream' => sub {
@@ -142,11 +188,19 @@ get '/streams/:stream/sensors' => sub {
 };
 
 get '/streams/:stream/samples' => sub {
-    get_samples( params->{stream} )->{rows};
+    get_samples( params->{stream} );
 };
 
 get '/sensors' => sub {
-    get_sensors()->{rows};
+    get_sensors();
+};
+
+get '/sensors/:sensor_id' => sub {
+    get_sensor(params->{sensor_id});
+};
+
+get '/sensors/:sensor_id/samples' => sub {
+    get_sensor_samples(params->{sensor_id});
 };
 
 dance();
