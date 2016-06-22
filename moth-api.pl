@@ -33,7 +33,7 @@ sub get_stream_sensors($) {
 sub get_stream($) {
     my ($stream_id) = @_;
 
-    my $stream_data = moth_query_item('moth_streams', ['id'],     [$stream_id]);
+    my $stream_data = moth_query_item('moth_streams', ['id'], [$stream_id]);
     my $sensor_data = moth_query('moth_sensors', ['stream'], [$stream_id]);
 
     $stream_data->{'sensors'} = $sensor_data;
@@ -86,7 +86,7 @@ sub get_sensor_samples($) {
         'moth_sample_data',
         ['sensor'],
         [$sensor_id],
-        ['inner,moth_samples,moth_samples.id = moth_sample_data.sample'],
+        ['inner,moth_samples,id = moth_sample_data.sample'],
     );
     $sensor->{samples} = $samples;
 
@@ -109,7 +109,7 @@ sub moth_query {
 
         if ($type =~ m/inner/i) {
             $query->{stmt} .=
-                sprintf(' INNER JOIN %s ON (%s)', $table, $clause);
+                sprintf(' INNER JOIN %s ON (%s.%s)', $table, $table, $clause);
         }
         else {
             die "ERROR - BAD JOIN TYPE - Expect 'INNER', got $type ($join)";
@@ -119,7 +119,7 @@ sub moth_query {
     if (scalar @$fields) {
         $query->{stmt} .= sprintf(
             ' WHERE %s',
-            join(' AND ', map { $_ =~ /=/ ? $_ : "$_ = ?" } @$fields),
+            join(' AND ', map { $_ =~ /([=\<\>]| LIKE )/ ? $_ : "$_ = ?" } @$fields),
         );
     }
 
