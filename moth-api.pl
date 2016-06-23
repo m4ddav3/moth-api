@@ -27,14 +27,14 @@ sub get_streams() { moth_query('moth_streams') }
 
 sub get_stream_sensors($) {
     my ($stream_id) = @_;
-    moth_query('moth_sensors', ['stream'], [$stream_id]);
+    moth_query('moth_sensors', undef, ['stream'], [$stream_id]);
 }
 
 sub get_stream($) {
     my ($stream_id) = @_;
 
-    my $stream_data = moth_query_item('moth_streams', ['id'], [$stream_id]);
-    my $sensor_data = moth_query('moth_sensors', ['stream'], [$stream_id]);
+    my $stream_data = moth_query_item('moth_streams', undef, ['id'], [$stream_id]);
+    my $sensor_data = moth_query('moth_sensors', undef, ['stream'], [$stream_id]);
 
     $stream_data->{'sensors'} = $sensor_data;
 
@@ -44,13 +44,13 @@ sub get_stream($) {
 sub get_samples($) {
     my ($stream_id) = @_;
 
-    my $samples = moth_query('moth_samples', ['stream'], [$stream_id]);
+    my $samples = moth_query('moth_samples', undef, ['stream'], [$stream_id]);
 
     foreach my $sample (@$samples) {
         my $sample_id = $sample->{id};
 
         my $sample_data =
-            moth_query('moth_sample_data', ['sample'], [$sample_id]);
+            moth_query('moth_sample_data', undef, ['sample'], [$sample_id]);
 
         push @{$sample->{data}}, $sample_data;
     }
@@ -65,8 +65,8 @@ sub get_sensors() {
 sub get_sensor($) {
     my ($sensor_id) = @_;
 
-    my $sensor = moth_query_item('moth_sensors', ['id'], [$sensor_id]);
-    my $metadata = moth_query('moth_sensor_metadata', ['sensor'], [$sensor_id]);
+    my $sensor = moth_query_item('moth_sensors', undef, ['id'], [$sensor_id]);
+    my $metadata = moth_query('moth_sensor_metadata', undef, ['sensor'], [$sensor_id]);
 
     $sensor->{metadata} = [];
 
@@ -84,6 +84,7 @@ sub get_sensor_samples($) {
 
     my $samples = moth_query(
         'moth_sample_data',
+        undef,
         ['sensor'],
         [$sensor_id],
         ['inner,moth_samples,id = moth_sample_data.sample'],
@@ -93,14 +94,17 @@ sub get_sensor_samples($) {
     return $sensor;
 }
 
-sub moth_query {
-    my ($table, $where, $params, $joins) = @_;
+sub moth_query ($;$$$$) {
+    my ($table, $fields, $where, $params, $joins) = @_;
 
+    $fields //= ['*'];
     $where  //= [];
     $params //= [];
     $joins  //= [];
 
-    my $query = { stmt => "SELECT * FROM $table" };
+    my $query = {
+        stmt => sprintf('SELECT %s FROM %s', join(', ', @$fields), $table),
+    };
 
     foreach my $join (@$joins) {
         my ($type, $table, $clause) = split(/,/, $join);
@@ -152,7 +156,7 @@ sub moth_query {
     return $data;
 }
 
-sub moth_query_item($;$$$) {
+sub moth_query_item ($;$$$$) {
     my $results = moth_query(@_);
     my ($result) = @$results;
 
