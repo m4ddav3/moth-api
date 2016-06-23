@@ -94,9 +94,9 @@ sub get_sensor_samples($) {
 }
 
 sub moth_query {
-    my ($table, $fields, $params, $joins) = @_;
+    my ($table, $where, $params, $joins) = @_;
 
-    $fields //= [];
+    $where  //= [];
     $params //= [];
     $joins  //= [];
 
@@ -116,10 +116,10 @@ sub moth_query {
         }
     };
 
-    if (scalar @$fields) {
+    if (scalar @$where) {
         $query->{stmt} .= sprintf(
             ' WHERE %s',
-            join(' AND ', map { $_ =~ /([=\<\>]| LIKE )/ ? $_ : "$_ = ?" } @$fields),
+            join(' AND ', map { $_ =~ /([=\<\>]| LIKE )/ ? $_ : "$_ = ?" } @$where),
         );
     }
 
