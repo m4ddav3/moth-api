@@ -23,34 +23,59 @@ our $json = JSON->new()->utf8(1);
 
 # TODO Pull these out into a separate module
 # TODO Refactor querying Crate and getting of data
-sub get_streams() { moth_query('moth_streams') }
-
-sub get_stream_sensors($) {
-    my ($stream_id) = @_;
-    moth_query('moth_sensors', undef, ['stream'], [$stream_id]);
+sub get_streams() {
+    moth_query('moth_streams', [qw(id name created_at updated_at)]);
 }
 
 sub get_stream($) {
     my ($stream_id) = @_;
 
-    my $stream_data = moth_query_item('moth_streams', undef, ['id'], [$stream_id]);
-    my $sensor_data = moth_query('moth_sensors', undef, ['stream'], [$stream_id]);
+    my $stream_data = moth_query_item('moth_streams',
+        [qw(id name created_at updated_at)],
+        ['id'], [$stream_id]);
 
-    $stream_data->{'sensors'} = $sensor_data;
+    $stream_data // die "Stream: $stream_id not found";
+
+    #my $sensor_data = moth_query('moth_sensors',
+    #    [qw(id name display_name created_at updated_at)],
+    #    ['stream'], [$stream_id]);
+
+    #$stream_data->{'sensors'} = $sensor_data;
+
+    my $sensor_count = moth_query_item('moth_sensors',
+        ['COUNT(*) AS val'],
+        ['stream'], [$stream_id]);
+
+    my $sample_count = moth_query_item('moth_samples',
+        ['COUNT(*) AS val'],
+        ['stream'], [$stream_id]);
+
+    $stream_data->{'num_sensors'} = $sensor_count->{val} // 0;
+    $stream_data->{'num_samples'} = $sample_count->{val} // 0;
 
     return $stream_data;
 }
 
-sub get_samples($) {
+sub get_stream_sensors($) {
+    my ($stream_id) = @_;
+    moth_query('moth_sensors',
+        [qw(id name display_name created_at updated_at)],
+        ['stream'], [$stream_id]);
+}
+
+sub get_stream_samples($) {
     my ($stream_id) = @_;
 
-    my $samples = moth_query('moth_samples', undef, ['stream'], [$stream_id]);
+    my $samples = moth_query('moth_samples',
+        [qw(id created_at updated_at)],
+        ['stream'], [$stream_id]);
 
     foreach my $sample (@$samples) {
         my $sample_id = $sample->{id};
 
-        my $sample_data =
-            moth_query('moth_sample_data', undef, ['sample'], [$sample_id]);
+        my $sample_data = moth_query('moth_sample_data',
+            [qw(id sensor val)],
+            ['sample'], [$sample_id]);
 
         push @{$sample->{data}}, $sample_data;
     }
@@ -59,20 +84,22 @@ sub get_samples($) {
 }
 
 sub get_sensors() {
-    return moth_query('moth_sensors');
+    return moth_query('moth_sensors',
+        [qw(id name display_name stream created_at updated_at)]);
 }
 
 sub get_sensor($) {
     my ($sensor_id) = @_;
 
-    my $sensor = moth_query_item('moth_sensors', undef, ['id'], [$sensor_id]);
-    my $metadata = moth_query('moth_sensor_metadata', undef, ['sensor'], [$sensor_id]);
+    my $sensor = moth_query_item('moth_sensors',
+        [qw(id name display_name stream created_at updated_at)],
+        ['id'], [$sensor_id]);
 
-    $sensor->{metadata} = [];
+    my $metadata = moth_query('moth_sensor_metadata',
+        ['k AS key, v AS value'],
+        ['sensor'], [$sensor_id]);
 
-    foreach my $row (@$metadata) {
-        push @{$sensor->{metadata}}, { key => $row->{k}, value => $row->{v} };
-    }
+    $sensor->{metadata} = $metadata;
 
     return $sensor;
 }
@@ -123,7 +150,9 @@ sub moth_query ($;$$$$) {
     if (scalar @$where) {
         $query->{stmt} .= sprintf(
             ' WHERE %s',
-            join(' AND ', map { $_ =~ /([=\<\>]| LIKE )/ ? $_ : "$_ = ?" } @$where),
+            join(' AND ', map {
+                $_ =~ /([=\<\>]| LIKE )/ ? $_ : "$_ = ?";
+            } @$where),
         );
     }
 
@@ -157,7 +186,9 @@ sub moth_query ($;$$$$) {
 }
 
 sub moth_query_item ($;$$$$) {
-    my $results = moth_query(@_);
+    my ($table, $fields, $where, $params, $joins) = @_;
+
+    my $results = moth_query($table, $fields, $where, $params, $joins);
     my ($result) = @$results;
 
     return $result;
@@ -192,7 +223,7 @@ get '/streams/:stream/sensors' => sub {
 };
 
 get '/streams/:stream/samples' => sub {
-    get_samples( params->{stream} );
+    get_stream_samples( params->{stream} );
 };
 
 get '/sensors' => sub {
@@ -200,11 +231,11 @@ get '/sensors' => sub {
 };
 
 get '/sensors/:sensor_id' => sub {
-    get_sensor(params->{sensor_id});
+    get_sensor( params->{sensor_id} );
 };
 
 get '/sensors/:sensor_id/samples' => sub {
-    get_sensor_samples(params->{sensor_id});
+    get_sensor_samples( params->{sensor_id} );
 };
 
 dance();
