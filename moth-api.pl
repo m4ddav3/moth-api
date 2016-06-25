@@ -121,6 +121,22 @@ sub get_sensor_samples($) {
     return $sensor;
 }
 
+sub add_sample($$) {
+    my ($stream_id, $sample_data) = @_;
+
+    my $stream_data = get_stream($stream_id);
+
+    my $sample_id = moth_next_id('moth_samples');
+
+    moth_insert('moth_samples', [qw(id stream created_at)], [$sample_id, $stream_id, gmtime]);
+
+    # parse the data, insert sample, and sample_data
+    # { timestamp?
+    #   sensors - id, value
+
+    # need a function to get the next id for a table
+}
+
 sub moth_query ($;$$$$) {
     my ($table, $fields, $where, $params, $joins) = @_;
 
@@ -192,6 +208,38 @@ sub moth_query_item ($;$$$$) {
     my ($result) = @$results;
 
     return $result;
+}
+
+sub moth_next_id ($) {
+    my ($table) = @_;
+
+    my $result = moth_query_item($table, ['MAX(id) AS last_id']);
+
+    return $result->{last_id} + 1;
+}
+
+sub moth_insert ($$$) {
+    my ($table, $fields, $values) = @_;
+
+    my $stmt_template = 'INSERT INTO %s (%s) VALUES (%s)';
+
+    my $query = {
+        stmt => sprintf($stmt_template,
+            $table,
+            join(', ', @$fields),
+            join(', ', map $_, @$fields),
+        ),
+        args => $values,
+    };
+
+    my $response = HTTP::Tiny->new()
+        ->post($base_url, { content => $json->encode($query) });
+
+    # TODO HTTP Response Code handling
+    #print Dumper $response;
+
+    my $content = $json->decode($response->{content});
+
 }
 
 # Needs a newer version of Dancer2, to support 'send_as HTML => $content'
