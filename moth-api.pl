@@ -135,6 +135,8 @@ sub add_sample($$) {
     #   sensors - id, value
 
     # need a function to get the next id for a table
+
+    return $sample_id;
 }
 
 sub moth_query ($;$$$$) {
