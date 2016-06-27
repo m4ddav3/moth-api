@@ -124,15 +124,21 @@ sub get_sensor_samples($) {
 sub add_sample($$) {
     my ($stream_id, $sample_data) = @_;
 
+    # parse the data, insert sample, and sample_data
+    # {
+    #     timestamp: 51401926511601770, (optional)
+    #     sensors: [
+    #         { <name>, <value> },
+    #         ...
+    #     ]
+    # }
+
     my $stream_data = get_stream($stream_id);
 
     my $sample_id = moth_next_id('moth_samples');
 
     moth_insert('moth_samples', [qw(id stream created_at)], [$sample_id, $stream_id, gmtime]);
 
-    # parse the data, insert sample, and sample_data
-    # { timestamp?
-    #   sensors - id, value
 
     # need a function to get the next id for a table
 
