@@ -137,7 +137,15 @@ sub add_sample($$) {
 
     my $sample_id = moth_next_id('moth_samples');
 
-    moth_insert('moth_samples', [qw(id stream created_at)], [$sample_id, $stream_id, gmtime]);
+    my $created_at = gmtime;
+
+    if (exists $sample_data->{created_at}) {
+        $created_at = $sample_data->{created_at};
+    }
+
+    moth_insert('moth_samples',
+        [qw(id stream created_at)],
+        [$sample_id, $stream_id, $created_at]);
 
 
     # need a function to get the next id for a table
