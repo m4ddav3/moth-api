@@ -36,12 +36,6 @@ sub get_stream($) {
 
     $stream_data // die "Stream: $stream_id not found";
 
-    #my $sensor_data = moth_query('moth_sensors',
-    #    [qw(id name display_name created_at updated_at)],
-    #    ['stream'], [$stream_id]);
-
-    #$stream_data->{'sensors'} = $sensor_data;
-
     my $sensor_count = moth_query_item('moth_sensors',
         ['COUNT(*) AS val'],
         ['stream'], [$stream_id]);
