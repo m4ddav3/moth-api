@@ -141,8 +141,19 @@ sub add_sample($$) {
         [qw(id stream created_at)],
         [$sample_id, $stream_id, $created_at]);
 
+    my $sensor_data = $sample_data->{sensors};
 
-    # need a function to get the next id for a table
+    foreach my $entry (@sensor_data) {
+        my ($name, $value) = @{$entry}{qw(name value)};
+
+        my $sensor_id = moth_query('moth_sensors', ['id'], ['name'], [$name]);
+
+        my $sample_data_id = moth_next_id('moth_sample_data');
+
+        moth_insert('moth_sample_data',
+            [qw(id sensor value)]),
+            [$sample_data_id, $sensor_id, $value];
+    }
 
     return $sample_id;
 }
@@ -294,6 +305,14 @@ get '/sensors/:sensor_id' => sub {
 
 get '/sensors/:sensor_id/samples' => sub {
     get_sensor_samples( params->{sensor_id} );
+};
+
+post '/streams/:stream/samples' => sub {
+    add_sample(
+        params->{stream},
+        body_parameters->get('timestamp'),
+        body_parameters->get('sensors'),
+    );
 };
 
 dance();
