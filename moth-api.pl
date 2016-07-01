@@ -115,6 +115,19 @@ sub get_sensor_samples($) {
     return $sensor;
 }
 
+sub add_stream ($) {
+    my ($stream_data) = @_;
+
+    my $stream_name = $stream_data->{name};
+    my $stream_id = moth_next_id('moth_streams');
+
+    moth_insert('moth_streams',
+        [qw(id name created_at)],
+        [$stream_id, $stream_name, gmtime]);
+
+    return $stream_id;
+}
+
 sub add_sample($$) {
     my ($stream_id, $sample_data) = @_;
 
@@ -305,6 +318,10 @@ get '/sensors/:sensor_id' => sub {
 
 get '/sensors/:sensor_id/samples' => sub {
     get_sensor_samples( params->{sensor_id} );
+};
+
+post '/streams' => sub {
+    add_stream(body_parameters->get('name'));
 };
 
 post '/streams/:stream/samples' => sub {
