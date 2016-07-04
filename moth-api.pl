@@ -125,7 +125,7 @@ sub add_stream ($) {
         [qw(id name created_at)],
         [$stream_id, $stream_name, time]);
 
-    return $stream_id;
+    return get_stream($stream_id);
 }
 
 sub add_sample($$) {
