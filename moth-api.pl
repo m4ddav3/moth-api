@@ -133,7 +133,7 @@ sub add_sample($$) {
 
     # parse the data, insert sample, and sample_data
     # {
-    #     timestamp: 51401926511601770, (optional)
+    #     created_at: 51401926511601770, (optional)
     #     sensors: [
     #         { <name>, <value> },
     #         ...
