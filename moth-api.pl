@@ -131,11 +131,16 @@ sub add_stream ($) {
 sub add_stream_sensor ($$) {
     my ($stream_id, $sensor_data) = @_;
 
-    my $stream = get_stream($stream_id);
+    my $stream    = get_stream($stream_id);
+    my $sensor_id = moth_next_id('moth_sensors');
 
-    $stream_id // die "Stream not found, id=$stream_id";
+    my ($name, $display_name) = @{$sensor_data}{qw/name display_name/};
 
+    moth_insert('moth_sensors',
+        [qw(id name display_name stream created_at)],
+        [$sensor_id, $name, $display_name, $stream_id, time]);
 
+    return get_sensor($sensor_id);
 }
 
 sub add_sample($$) {
@@ -339,6 +344,13 @@ get '/sensors/:sensor_id/samples' => sub {
 
 post '/streams' => sub {
     add_stream( params('body') );
+};
+
+post '/streams/:stream/sensors' => sub {
+    add_stream_sensor(
+        params->{stream},
+        params('body'),
+    );
 };
 
 post '/streams/:stream/samples' => sub {
