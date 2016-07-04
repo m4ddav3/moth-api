@@ -123,7 +123,7 @@ sub add_stream ($) {
 
     moth_insert('moth_streams',
         [qw(id name created_at)],
-        [$stream_id, $stream_name, gmtime]);
+        [$stream_id, $stream_name, time]);
 
     return $stream_id;
 }
@@ -144,7 +144,7 @@ sub add_sample($$) {
 
     my $sample_id = moth_next_id('moth_samples');
 
-    my $created_at = gmtime;
+    my $created_at = time;
 
     if (exists $sample_data->{created_at}) {
         $created_at = $sample_data->{created_at};
