@@ -156,7 +156,7 @@ sub add_sample($$) {
 
     my $sensor_data = $sample_data->{sensors};
 
-    foreach my $entry (@sensor_data) {
+    foreach my $entry (@$sensor_data) {
         my ($name, $value) = @{$entry}{qw(name value)};
 
         my $sensor_id = moth_query('moth_sensors', ['id'], ['name'], [$name]);
@@ -164,8 +164,8 @@ sub add_sample($$) {
         my $sample_data_id = moth_next_id('moth_sample_data');
 
         moth_insert('moth_sample_data',
-            [qw(id sensor value)]),
-            [$sample_data_id, $sensor_id, $value];
+            [qw(id sensor value)],
+            [$sample_data_id, $sensor_id, $value]);
     }
 
     return $sample_id;
