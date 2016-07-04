@@ -328,14 +328,13 @@ get '/sensors/:sensor_id/samples' => sub {
 };
 
 post '/streams' => sub {
-    add_stream(body_parameters->get('name'));
+    add_stream( params('body') );
 };
 
 post '/streams/:stream/samples' => sub {
     add_sample(
         params->{stream},
-        body_parameters->get('timestamp'),
-        body_parameters->get('sensors'),
+        params('body'),
     );
 };
 
