@@ -36,12 +36,6 @@ sub get_stream($) {
 
     $stream_data // die "Stream: $stream_id not found";
 
-    #my $sensor_data = moth_query('moth_sensors',
-    #    [qw(id name display_name created_at updated_at)],
-    #    ['stream'], [$stream_id]);
-
-    #$stream_data->{'sensors'} = $sensor_data;
-
     my $sensor_count = moth_query_item('moth_sensors',
         ['COUNT(*) AS val'],
         ['stream'], [$stream_id]);
@@ -121,6 +115,62 @@ sub get_sensor_samples($) {
     return $sensor;
 }
 
+sub add_stream ($) {
+    my ($stream_data) = @_;
+
+    my $stream_name = $stream_data->{name};
+    my $stream_id = moth_next_id('moth_streams');
+
+    moth_insert('moth_streams',
+        [qw(id name created_at)],
+        [$stream_id, $stream_name, time]);
+
+    return get_stream($stream_id);
+}
+
+sub add_sample($$) {
+    my ($stream_id, $sample_data) = @_;
+
+    # parse the data, insert sample, and sample_data
+    # {
+    #     created_at: 51401926511601770, (optional)
+    #     sensors: [
+    #         { <name>, <value> },
+    #         ...
+    #     ]
+    # }
+
+    my $stream_data = get_stream($stream_id);
+
+    my $sample_id = moth_next_id('moth_samples');
+
+    my $created_at = time;
+
+    if (exists $sample_data->{created_at}) {
+        $created_at = $sample_data->{created_at};
+    }
+
+    moth_insert('moth_samples',
+        [qw(id stream created_at)],
+        [$sample_id, $stream_id, $created_at]);
+
+    my $sensor_data = $sample_data->{sensors};
+
+    foreach my $entry (@$sensor_data) {
+        my ($name, $value) = @{$entry}{qw(name value)};
+
+        my $sensor_id = moth_query('moth_sensors', ['id'], ['name'], [$name]);
+
+        my $sample_data_id = moth_next_id('moth_sample_data');
+
+        moth_insert('moth_sample_data',
+            [qw(id sensor value)],
+            [$sample_data_id, $sensor_id, $value]);
+    }
+
+    return $sample_id;
+}
+
 sub moth_query ($;$$$$) {
     my ($table, $fields, $where, $params, $joins) = @_;
 
@@ -170,6 +220,21 @@ sub moth_query ($;$$$$) {
 
     my $content = $json->decode($response->{content});
 
+    return moth_response($content);
+}
+
+sub moth_query_item ($;$$$$) {
+    my ($table, $fields, $where, $params, $joins) = @_;
+
+    my $results = moth_query($table, $fields, $where, $params, $joins);
+    my ($result) = @$results;
+
+    return $result;
+}
+
+sub moth_response($) {
+    my ($content) = @_;
+
     my $data = [];
 
     my $cols = $content->{cols};
@@ -185,13 +250,37 @@ sub moth_query ($;$$$$) {
     return $data;
 }
 
-sub moth_query_item ($;$$$$) {
-    my ($table, $fields, $where, $params, $joins) = @_;
+sub moth_next_id ($) {
+    my ($table) = @_;
 
-    my $results = moth_query($table, $fields, $where, $params, $joins);
-    my ($result) = @$results;
+    my $result = moth_query_item($table, ['MAX(id) AS last_id']);
 
-    return $result;
+    return $result->{last_id} + 1;
+}
+
+sub moth_insert ($$$) {
+    my ($table, $fields, $values) = @_;
+
+    my $stmt_template = 'INSERT INTO %s (%s) VALUES (%s)';
+
+    my $query = {
+        stmt => sprintf($stmt_template,
+            $table,
+            join(', ', @$fields),
+            join(', ', map '?', @$fields),
+        ),
+        args => $values,
+    };
+
+    my $response = HTTP::Tiny->new()
+        ->post($base_url, { content => $json->encode($query) });
+
+    # TODO HTTP Response Code handling
+    #print Dumper $response;
+
+    my $content = $json->decode($response->{content});
+
+    return moth_response($content);
 }
 
 # Needs a newer version of Dancer2, to support 'send_as HTML => $content'
@@ -236,6 +325,17 @@ get '/sensors/:sensor_id' => sub {
 
 get '/sensors/:sensor_id/samples' => sub {
     get_sensor_samples( params->{sensor_id} );
+};
+
+post '/streams' => sub {
+    add_stream( params('body') );
+};
+
+post '/streams/:stream/samples' => sub {
+    add_sample(
+        params->{stream},
+        params('body'),
+    );
 };
 
 dance();
