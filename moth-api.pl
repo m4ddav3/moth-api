@@ -267,7 +267,7 @@ sub moth_insert ($$$) {
         stmt => sprintf($stmt_template,
             $table,
             join(', ', @$fields),
-            join(', ', map $_, @$fields),
+            join(', ', map '?', @$fields),
         ),
         args => $values,
     };
@@ -280,6 +280,7 @@ sub moth_insert ($$$) {
 
     my $content = $json->decode($response->{content});
 
+    return moth_response($content);
 }
 
 # Needs a newer version of Dancer2, to support 'send_as HTML => $content'
