@@ -128,6 +128,16 @@ sub add_stream ($) {
     return get_stream($stream_id);
 }
 
+sub add_stream_sensor ($$) {
+    my ($stream_id, $sensor_data) = @_;
+
+    my $stream = get_stream($stream_id);
+
+    $stream_id // die "Stream not found, id=$stream_id";
+
+
+}
+
 sub add_sample($$) {
     my ($stream_id, $sample_data) = @_;
 
