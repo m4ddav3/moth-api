@@ -220,6 +220,21 @@ sub moth_query ($;$$$$) {
 
     my $content = $json->decode($response->{content});
 
+    return moth_response($content);
+}
+
+sub moth_query_item ($;$$$$) {
+    my ($table, $fields, $where, $params, $joins) = @_;
+
+    my $results = moth_query($table, $fields, $where, $params, $joins);
+    my ($result) = @$results;
+
+    return $result;
+}
+
+sub moth_response($) {
+    my ($content) = @_;
+
     my $data = [];
 
     my $cols = $content->{cols};
@@ -233,15 +248,6 @@ sub moth_query ($;$$$$) {
     }
 
     return $data;
-}
-
-sub moth_query_item ($;$$$$) {
-    my ($table, $fields, $where, $params, $joins) = @_;
-
-    my $results = moth_query($table, $fields, $where, $params, $joins);
-    my ($result) = @$results;
-
-    return $result;
 }
 
 sub moth_next_id ($) {
