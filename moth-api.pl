@@ -177,20 +177,29 @@ sub add_sample($$) {
         [$sample_id, $stream_id, $created_at]);
 
     my $sensor_data = $sample_data->{sensors};
+    my $sample_data_id = moth_next_id('moth_sample_data');
 
+    my $values = [];
+
+    # Lump all the sensor data into one insert
     foreach my $entry (@$sensor_data) {
         my ($name, $value) = @{$entry}{qw(name value)};
 
-        my $sensor_id = moth_query('moth_sensors', ['id'], ['name'], [$name]);
+        my $sensor = moth_query_item('moth_sensors',
+            ['id'],
+            ['name', 'stream'],
+            [$name, $stream_id]);
 
-        my $sample_data_id = moth_next_id('moth_sample_data');
+        my $sensor_id = $sensor->{id};
 
-        moth_insert('moth_sample_data',
-            [qw(id sensor value)],
-            [$sample_data_id, $sensor_id, $value]);
+        push @$values, [ $sample_data_id++, $sample_id, $sensor_id, $value ];
     }
 
-    return $sample_id;
+    moth_insert('moth_sample_data',
+        [qw(id sample sensor value)],
+        $values);
+
+    return { sample => $sample_id };
 }
 
 sub moth_query ($;$$$$$) {
