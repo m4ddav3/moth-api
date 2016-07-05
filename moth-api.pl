@@ -69,6 +69,7 @@ sub get_stream_samples($) {
 
     foreach my $sample (@$samples) {
         my $sample_id = $sample->{id};
+        $sample->{data} = [];
 
         my $sample_data = moth_query('moth_sample_data',
             [qw(id sensor value)],
@@ -77,7 +78,7 @@ sub get_stream_samples($) {
             undef,
             ['id']);
 
-        push @{$sample->{data}}, $sample_data;
+        $sample->{data} = $sample_data;
     }
 
     return $samples;
