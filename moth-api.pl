@@ -62,16 +62,23 @@ sub get_stream_samples($) {
 
     my $samples = moth_query('moth_samples',
         [qw(id created_at updated_at)],
-        ['stream'], [$stream_id]);
+        ['stream'],
+        [$stream_id],
+        undef,
+        ['created_at']);
 
     foreach my $sample (@$samples) {
         my $sample_id = $sample->{id};
+        $sample->{data} = [];
 
         my $sample_data = moth_query('moth_sample_data',
-            [qw(id sensor val)],
-            ['sample'], [$sample_id]);
+            [qw(id sensor value)],
+            ['sample'],
+            [$sample_id],
+            undef,
+            ['id']);
 
-        push @{$sample->{data}}, $sample_data;
+        $sample->{data} = $sample_data;
     }
 
     return $samples;
@@ -128,6 +135,21 @@ sub add_stream ($) {
     return get_stream($stream_id);
 }
 
+sub add_stream_sensor ($$) {
+    my ($stream_id, $sensor_data) = @_;
+
+    my $stream    = get_stream($stream_id);
+    my $sensor_id = moth_next_id('moth_sensors');
+
+    my ($name, $display_name) = @{$sensor_data}{qw/name display_name/};
+
+    moth_insert('moth_sensors',
+        [qw(id name display_name stream created_at)],
+        [$sensor_id, $name, $display_name, $stream_id, time]);
+
+    return get_sensor($sensor_id);
+}
+
 sub add_sample($$) {
     my ($stream_id, $sample_data) = @_;
 
@@ -155,29 +177,39 @@ sub add_sample($$) {
         [$sample_id, $stream_id, $created_at]);
 
     my $sensor_data = $sample_data->{sensors};
+    my $sample_data_id = moth_next_id('moth_sample_data');
 
+    my $values = [];
+
+    # Lump all the sensor data into one insert
     foreach my $entry (@$sensor_data) {
         my ($name, $value) = @{$entry}{qw(name value)};
 
-        my $sensor_id = moth_query('moth_sensors', ['id'], ['name'], [$name]);
+        my $sensor = moth_query_item('moth_sensors',
+            ['id'],
+            ['name', 'stream'],
+            [$name, $stream_id]);
 
-        my $sample_data_id = moth_next_id('moth_sample_data');
+        my $sensor_id = $sensor->{id};
 
-        moth_insert('moth_sample_data',
-            [qw(id sensor value)],
-            [$sample_data_id, $sensor_id, $value]);
+        push @$values, [ $sample_data_id++, $sample_id, $sensor_id, $value ];
     }
 
-    return $sample_id;
+    moth_insert('moth_sample_data',
+        [qw(id sample sensor value)],
+        $values);
+
+    return { sample => $sample_id };
 }
 
-sub moth_query ($;$$$$) {
-    my ($table, $fields, $where, $params, $joins) = @_;
+sub moth_query ($;$$$$$) {
+    my ($table, $fields, $where, $params, $joins, $orders) = @_;
 
     $fields //= ['*'];
     $where  //= [];
     $params //= [];
     $joins  //= [];
+    $orders //= [];
 
     my $query = {
         stmt => sprintf('SELECT %s FROM %s', join(', ', @$fields), $table),
@@ -204,6 +236,10 @@ sub moth_query ($;$$$$) {
                 $_ =~ /([=\<\>]| LIKE )/ ? $_ : "$_ = ?";
             } @$where),
         );
+    }
+
+    if (scalar @$orders) {
+        $query->{stmt} .= sprintf(' ORDER BY %s', join(', ', @$orders));
     }
 
     if (scalar @$params) {
@@ -261,13 +297,27 @@ sub moth_next_id ($) {
 sub moth_insert ($$$) {
     my ($table, $fields, $values) = @_;
 
-    my $stmt_template = 'INSERT INTO %s (%s) VALUES (%s)';
+    my $stmt_template = 'INSERT INTO %s (%s) VALUES %s';
+
+    my $values_part = '';
+
+    if (ref $values->[0] eq 'ARRAY') {
+        $values_part = join(', ', map {
+            sprintf("(%s)", join(', ', map '?', @$fields));
+        } @$values);
+
+        my @unrolled_values = map { @$_ } @$values;
+        $values = \@unrolled_values;
+    }
+    else {
+        $values_part = join(', ', map '?', @$fields);
+    }
 
     my $query = {
         stmt => sprintf($stmt_template,
             $table,
             join(', ', @$fields),
-            join(', ', map '?', @$fields),
+            $values_part,
         ),
         args => $values,
     };
@@ -329,6 +379,13 @@ get '/sensors/:sensor_id/samples' => sub {
 
 post '/streams' => sub {
     add_stream( params('body') );
+};
+
+post '/streams/:stream/sensors' => sub {
+    add_stream_sensor(
+        params->{stream},
+        params('body'),
+    );
 };
 
 post '/streams/:stream/samples' => sub {
