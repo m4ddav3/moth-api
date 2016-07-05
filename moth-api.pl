@@ -310,7 +310,7 @@ sub moth_insert ($$$) {
         $values = \@unrolled_values;
     }
     else {
-        $values_part = join(', ', map '?', @$fields);
+        $values_part = sprintf("(%s)", join(', ', map '?', @$fields));
     }
 
     my $query = {
