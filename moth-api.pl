@@ -186,13 +186,14 @@ sub add_sample($$) {
     return $sample_id;
 }
 
-sub moth_query ($;$$$$) {
-    my ($table, $fields, $where, $params, $joins) = @_;
+sub moth_query ($;$$$$$) {
+    my ($table, $fields, $where, $params, $joins, $orders) = @_;
 
     $fields //= ['*'];
     $where  //= [];
     $params //= [];
     $joins  //= [];
+    $orders //= [];
 
     my $query = {
         stmt => sprintf('SELECT %s FROM %s', join(', ', @$fields), $table),
@@ -219,6 +220,10 @@ sub moth_query ($;$$$$) {
                 $_ =~ /([=\<\>]| LIKE )/ ? $_ : "$_ = ?";
             } @$where),
         );
+    }
+
+    if (scalar @$orders) {
+        $query->{stmt} .= sprintf(' ORDER BY %s', join(', ', @$orders));
     }
 
     if (scalar @$params) {
