@@ -24,7 +24,10 @@ our $json = JSON->new()->utf8(1);
 # TODO Pull these out into a separate module
 # TODO Refactor querying Crate and getting of data
 sub get_streams() {
-    moth_query('moth_streams', [qw(id name created_at updated_at)]);
+    moth_query('moth_streams',
+        [qw(id name created_at updated_at)],
+        undef, undef, undef,
+        ['created_at']);
 }
 
 sub get_stream($) {
@@ -54,7 +57,9 @@ sub get_stream_sensors($) {
     my ($stream_id) = @_;
     moth_query('moth_sensors',
         [qw(id name display_name created_at updated_at)],
-        ['stream'], [$stream_id]);
+        ['stream'], [$stream_id],
+        undef,
+        ['created_at']);
 }
 
 sub get_stream_samples($) {
