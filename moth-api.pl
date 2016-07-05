@@ -288,13 +288,27 @@ sub moth_next_id ($) {
 sub moth_insert ($$$) {
     my ($table, $fields, $values) = @_;
 
-    my $stmt_template = 'INSERT INTO %s (%s) VALUES (%s)';
+    my $stmt_template = 'INSERT INTO %s (%s) VALUES %s';
+
+    my $values_part = '';
+
+    if (ref $values->[0] eq 'ARRAY') {
+        $values_part = join(', ', map {
+            sprintf("(%s)", join(', ', map '?', @$fields));
+        } @$values);
+
+        my @unrolled_values = map { @$_ } @$values;
+        $values = \@unrolled_values;
+    }
+    else {
+        $values_part = join(', ', map '?', @$fields);
+    }
 
     my $query = {
         stmt => sprintf($stmt_template,
             $table,
             join(', ', @$fields),
-            join(', ', map '?', @$fields),
+            $values_part,
         ),
         args => $values,
     };
