@@ -13,19 +13,19 @@ my $json = JSON->new()->utf8(1);
 
 sub new {
     my ($class, $host, $port) = @_;
-    
+
     my $self = {
         host => $host,
         port => $port,
         query_url => undef,
     };
-    
+
     $self->{query_url} = URI->new(
         sprintf($base_url_template, $host, $port)
     );
-    
+
     bless $self, ref($class)||$class;
-    
+
     return $self;
 }
 
@@ -33,7 +33,7 @@ sub new {
 # TODO Refactor querying Crate and getting of data
 sub get_streams {
     my ($self) = @_;
-    
+
     return $self->moth_query('moth_streams',
         [qw(id name created_at updated_at)],
         undef, undef, undef,
@@ -65,7 +65,7 @@ sub get_stream {
 
 sub get_stream_sensors($) {
     my ($self, $stream_id) = @_;
-    
+
     return $self->moth_query('moth_sensors',
         [qw(id name display_name created_at updated_at)],
         ['stream'], [$stream_id],
@@ -102,7 +102,7 @@ sub get_stream_samples($) {
 
 sub get_sensors() {
     my ($self) = @_;
-    
+
     return $self->moth_query('moth_sensors',
         [qw(id name display_name stream created_at updated_at)]);
 }
