@@ -5,6 +5,8 @@ use HTTP::Tiny;
 use JSON;
 use URI;
 
+use Data::Dumper;
+
 my $base_url_template = "http://%s:%s/_sql";
 
 my $json = JSON->new()->utf8(1);
