@@ -13,7 +13,7 @@ set serializer => 'JSON';
 my $crate_host = 'localhost';
 my $crate_port = 4200;
 
-my $moth = Moth->new($crate_host, $create_port);
+my $moth = Moth->new($crate_host, $crate_port);
 
 # Needs a newer version of Dancer2, to support 'send_as HTML => $content'
 get '/' => sub {
