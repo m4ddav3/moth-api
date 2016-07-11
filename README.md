@@ -109,3 +109,48 @@ IoT data API powered by Perl, Dancer2, Crate, Docker, &lt;other buzz words ...>
             ... TBD ...
         ]
     }
+
+
+#### POST /streams
+
+    {
+        "name": "My Stream"
+    }
+
+##### Response
+    {
+        "id": 1,
+        "name": "My Stream",
+        "created_at": 123456789,
+        "update_at": null,
+        "num_sensors": 0,
+        "num_samples": 0
+    }
+
+#### POST /streams/:stream/sensors
+    {
+        "name": "sensor-1",
+        "display_name": "Sensor 1",
+        metadata: [
+            ... TBD ...
+        ]
+    }
+
+(Missing metadata structure)
+    
+##### Response
+    {
+        "id": 1,
+        "name": "sensor-1",
+        "display_name": "Sensor 1",
+        "stream": 1,
+        "created_at": 123456789,
+        "updated_at": null,
+        "metadata": [
+            {
+                "key": "Some Key",
+                "value": "The Value"
+            },
+            ...
+        ]
+    }
