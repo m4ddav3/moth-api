@@ -133,9 +133,13 @@ IoT data API powered by Perl, Dancer2, Crate, Docker, &lt;other buzz words ...>
     {
         "name": "sensor-1",
         "display_name": "Sensor 1",
-        metadata: [
-            ... TBD ...
-        ]
+        "metadata": [
+            {
+                "key": "Some Key",
+                "value": "The Value"
+            },
+            ...
+        ],
     }
 
 (Missing metadata structure)
