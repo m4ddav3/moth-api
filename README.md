@@ -106,7 +106,12 @@ IoT data API powered by Perl, Dancer2, Crate, Docker, &lt;other buzz words ...>
             ...
         ],
         "samples": [
-            ... TBD ...
+            {
+                "id": 1,
+                "created_at": 123456789,
+                "updated_at": null
+            },
+            ...
         ]
     }
 
