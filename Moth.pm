@@ -168,11 +168,11 @@ sub add_stream_sensor ($$) {
         [qw(id name display_name stream created_at)],
         [$sensor_id, $name, $display_name, $stream_id, $created_at]);
 
-    my $metdata_id = $self->moth_next_id('moth_sensor_metadata');
+    my $metadata_id = $self->moth_next_id('moth_sensor_metadata');
 
     my $metadata_entries = [];
-    @$metdata_entries = map {
-        [ $metdata_id++, $_->{key}, $_->{value}, $sensor_id, $created_at ]
+    @$metadata_entries = map {
+        [ $metadata_id++, $_->{key}, $_->{value}, $sensor_id, $created_at ]
     } @$metadata;
 
     $self->moth_insert('moth_sensor_metadata',
