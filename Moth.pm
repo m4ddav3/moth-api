@@ -130,7 +130,7 @@ sub get_sensor_samples($) {
 
     my $samples = $self->moth_query(
         'moth_sample_data',
-        undef,
+        [qw(id created_at updated_at)],
         ['sensor'],
         [$sensor_id],
         ['inner,moth_samples,id = moth_sample_data.sample'],
