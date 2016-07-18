@@ -6,6 +6,8 @@ RUN cpanm --no-wget JSON::XS URL::Encode::XS && cpanm --no-wget Dancer2
 RUN apk del perl-dev curl build-base gcc abuild binutils
 
 RUN git clone https://github.com/m4ddav3/moth-api.git
+# Alternatively, if the repo is already checked out this might work
+# ADD . moth-api/
 
 EXPOSE 3000
 
