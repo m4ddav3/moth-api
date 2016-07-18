@@ -11,19 +11,3 @@ EXPOSE 3000
 
 WORKDIR moth-api
 CMD ["perl", "moth-api.pl"]
-
-#CMD ["/bin/sh"]
-#RUN top
-#RUN ash
-
-# install perl, git
-# curl -L https://cpanmin.us | perl - App::cpanminus
-# install carton, dancer2, json
-# clone repo
-# run moth-api
-# expose 3000
-
-
-
-# apk add build-base gcc abuild binutils binutils-doc gcc-doc perl-plack
-# cpanm JSON::XS URL::Encode::XS Dancer2
