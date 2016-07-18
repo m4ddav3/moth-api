@@ -1,0 +1,2 @@
+- Make crate host/port configurable via environment variables
+- Use alpine packages for perl dependancies (i.e. make the packages)
